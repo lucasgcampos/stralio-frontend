@@ -1,16 +1,17 @@
 // Donation limits
-export const MIN_DONATION = 10;
+export const MIN_DONATION = 2;
 export const MAX_DONATION = 10000;
 
 // Field limits
 export const USERNAME_MAX_LENGTH = 30;
-export const MESSAGE_MAX_LENGTH = 500;
+export const MESSAGE_MAX_LENGTH = 200;
 
 // Recipient address (from environment variable with fallback)
 export const RECIPIENT_ADDRESS = import.meta.env.VITE_RECIPIENT_ADDRESS || 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
 // Stellar network
-export const STELLAR_NETWORK = 'PUBLIC';
+// export const STELLAR_NETWORK = 'PUBLIC';
+export const STELLAR_NETWORK = 'TESTNET';
 export const LUMENS = 10000000; // 1 XLM = 10^7 stroops
 
 // UI messages

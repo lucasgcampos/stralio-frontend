@@ -3,8 +3,8 @@ import { useStralioForm } from '../hooks/useStralioForm';
 import { useFreighter } from '../hooks/useFreighter';
 import { buildTransaction, signAndSubmit, getTransactionUrl } from '../utils/stellar';
 import { validateForm } from '../utils/validation';
-import { RECIPIENT_ADDRESS, MIN_DONATION, MAX_DONATION, MESSAGES } from '../config/constants';
-import { Server } from '@stellar/stellar-sdk';
+import { RECIPIENT_ADDRESS, MIN_DONATION, MAX_DONATION, MESSAGES, STELLAR_NETWORK } from '../config/constants';
+import { Horizon } from "@stellar/stellar-sdk";
 import FormField from './FormField';
 import StatusMessage from './StatusMessage';
 
@@ -37,7 +37,11 @@ const StralioForm = () => {
 
       try {
         // Build server instance
-        const server = new Server('https://horizon.stellar.org');
+        const server = new Horizon.Server(
+          STELLAR_NETWORK === 'PUBLIC'
+            ? 'https://horizon.stellar.org'
+            : 'https://horizon-testnet.stellar.org'
+        );
 
         // Build transaction
         const transaction = await buildTransaction(
