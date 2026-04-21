@@ -42,7 +42,7 @@ export const buildTransaction = async (sourcePublicKey, destinationPublicKey, am
       Operation.payment({
         destination: destinationPublicKey,
         asset: Asset.native(),
-        amount: (amount * LUMENS).toString(),
+        amount: amount.toString(),
       })
     )
     .setTimeout(180)
@@ -59,22 +59,22 @@ export const buildTransaction = async (sourcePublicKey, destinationPublicKey, am
 export const signAndSubmit = async (transaction) => {
   try {
     const { signTransaction } = await import('@stellar/freighter-api');
-
+    
     // Let Freighter sign the transaction
     const signedTransaction = await signTransaction(transaction.toXDR(), {
-      network: STELLAR_NETWORK === 'PUBLIC' ? 'PUBLIC' : 'TESTNET',
+      networkPassphrase: STELLAR_NETWORK === 'PUBLIC' ? Networks.PUBLIC : Networks.TESTNET,
     });
 
     // Submit to network
-    const { Server } = await import('@stellar/stellar-sdk');
-    const server = new Server(
+    const { Horizon } = await import('@stellar/stellar-sdk');
+    const server = new Horizon.Server(
       STELLAR_NETWORK === 'PUBLIC'
         ? 'https://horizon.stellar.org'
         : 'https://horizon-testnet.stellar.org'
     );
 
     const result = await server.submitTransaction(signedTransaction);
-
+    
     return {
       success: true,
       hash: result.hash,

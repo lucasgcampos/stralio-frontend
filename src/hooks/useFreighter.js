@@ -15,13 +15,15 @@ export const useFreighter = () => {
   useEffect(() => {
     const checkInstallation = async () => {
       try {
-        const { isAllowed } = await import('@stellar/freighter-api');
+        const { isAllowed, requestAccess } = await import('@stellar/freighter-api');
         const allowed = await isAllowed();
         setIsInstalled(true);
 
+        await requestAccess();
+
         if (allowed) {
           setIsConnected(true);
-          const { getAddress } = await import('@stellar/freighter-api');
+          const { getAddress } = await import('@stellar/freighter-api');        
           const key = await getAddress();
           setPublicKey(key);
         }
