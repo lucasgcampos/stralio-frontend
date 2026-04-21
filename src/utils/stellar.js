@@ -1,4 +1,4 @@
-import { Keypair, TransactionBuilder, Networks, Operation, StrKey, Asset } from '@stellar/stellar-sdk';
+import { Keypair, TransactionBuilder, Networks, Operation, StrKey, Asset, Transaction } from '@stellar/stellar-sdk';
 import { LUMENS, STELLAR_NETWORK } from '../config/constants';
 
 /**
@@ -61,9 +61,12 @@ export const signAndSubmit = async (transaction) => {
     const { signTransaction } = await import('@stellar/freighter-api');
     
     // Let Freighter sign the transaction
-    const signedTransaction = await signTransaction(transaction.toXDR(), {
+    const { signedTxXdr } = await signTransaction(transaction.toXDR(), {
       networkPassphrase: STELLAR_NETWORK === 'PUBLIC' ? Networks.PUBLIC : Networks.TESTNET,
     });
+
+    // Reconstruct the Transaction from the signed XDR
+    const signedTransaction = TransactionBuilder.fromXDR(signedTxXdr, STELLAR_NETWORK === 'PUBLIC' ? Networks.PUBLIC : Networks.TESTNET);
 
     // Submit to network
     const { Horizon } = await import('@stellar/stellar-sdk');
