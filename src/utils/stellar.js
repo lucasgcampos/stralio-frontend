@@ -1,4 +1,4 @@
-import { Keypair, TransactionBuilder, Networks, Operation, StrKey } from '@stellar/stellar-sdk';
+import { Keypair, TransactionBuilder, Networks, Operation, StrKey, Asset } from '@stellar/stellar-sdk';
 import { LUMENS, STELLAR_NETWORK } from '../config/constants';
 
 /**
@@ -24,14 +24,15 @@ export const getPublicKey = async () => {
  */
 export const buildTransaction = async (sourcePublicKey, destinationPublicKey, amount, server) => {
   // Validate addresses
-  if (!StrKey.isValidEd25519PublicKey(sourcePublicKey)) {
+  if (!StrKey.isValidEd25519PublicKey(sourcePublicKey.address)) {
     throw new Error('Invalid source public key');
   }
+
   if (!StrKey.isValidEd25519PublicKey(destinationPublicKey)) {
     throw new Error('Invalid destination public key');
   }
 
-  const sourceAccount = await server.loadAccount(sourcePublicKey);
+  const sourceAccount = await server.loadAccount(sourcePublicKey.address);
 
   const transaction = new TransactionBuilder(sourceAccount, {
     fee: await server.fetchBaseFee(),
@@ -40,7 +41,7 @@ export const buildTransaction = async (sourcePublicKey, destinationPublicKey, am
     .addOperation(
       Operation.payment({
         destination: destinationPublicKey,
-        asset: 'native',
+        asset: Asset.native(),
         amount: (amount * LUMENS).toString(),
       })
     )
