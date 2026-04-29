@@ -1,5 +1,5 @@
-import { Keypair, TransactionBuilder, Networks, Operation, StrKey, Asset, Transaction } from '@stellar/stellar-sdk';
-import { LUMENS, STELLAR_NETWORK } from '../config/constants';
+import { Keypair, TransactionBuilder, Networks, Operation, StrKey, Asset, Transaction, Address, nativeToScVal } from '@stellar/stellar-sdk';
+import { LUMENS, STELLAR_NETWORK, RECIPIENT_ADDRESS } from '../config/constants';
 
 /**
  * Get the public key from Freighter wallet
@@ -28,21 +28,26 @@ export const buildTransaction = async (sourcePublicKey, destinationPublicKey, am
     throw new Error('Invalid source public key');
   }
 
-  if (!StrKey.isValidEd25519PublicKey(destinationPublicKey)) {
+  if (!StrKey.isValidContract(destinationPublicKey)) {
     throw new Error('Invalid destination public key');
   }
 
   const sourceAccount = await server.loadAccount(sourcePublicKey.address);
-
+  
   const transaction = new TransactionBuilder(sourceAccount, {
     fee: await server.fetchBaseFee(),
     networkPassphrase: STELLAR_NETWORK === 'PUBLIC' ? Networks.PUBLIC : Networks.TESTNET,
   })
     .addOperation(
-      Operation.payment({
-        destination: destinationPublicKey,
-        asset: Asset.native(),
-        amount: amount.toString(),
+      Operation.invokeContractFunction({
+        contract: RECIPIENT_ADDRESS,
+        function: "donate",
+        args: [
+          new Address(sourceAccount.account_id).toScVal(),
+          new Address(destinationPublicKey).toScVal(), 
+          new Address("CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC").toScVal(), 
+          nativeToScVal(amount * LUMENS, { type: "i128" })
+        ]
       })
     )
     .setTimeout(180)
