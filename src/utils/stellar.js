@@ -1,14 +1,14 @@
 import { Keypair, TransactionBuilder, Networks, Operation, StrKey, Asset, Transaction, Address, nativeToScVal } from '@stellar/stellar-sdk';
-import { LUMENS, STELLAR_NETWORK, RECIPIENT_ADDRESS } from '../config/constants';
+import { LUMENS, STRALIO_CONTRACT_ID, HORIZON_SERVER_URL, XML_CONTRACT_ID, NETWORK_PASSPHRASE, RPC_SOROBAN_URL } from '../config/constants';
 
 /**
  * Get the public key from Freighter wallet
- * @returns {Promise<string>} - Public key
+ * @returns {Promise<string>} - Address
  */
-export const getPublicKey = async () => {
+export const getAddress = async () => {
   try {
-    const { getPublicKey } = await import('@stellar/freighter-api');
-    return await getPublicKey();
+    const { getAddress } = await import('@stellar/freighter-api');
+    return await getAddress();
   } catch (error) {
     throw new Error('Failed to get public key from Freighter');
   }
@@ -16,37 +16,38 @@ export const getPublicKey = async () => {
 
 /**
  * Build a Stellar transaction for payment
- * @param {string} sourcePublicKey - Sender's public key
- * @param {string} destinationPublicKey - Recipient's public key
+ * @param {string} toAddress - Recipient's public key
  * @param {number} amount - Amount in XLM
  * @param {Object} server - Stellar SDK server instance
  * @returns {Promise<Transaction>} - Transaction object
  */
-export const buildTransaction = async (sourcePublicKey, destinationPublicKey, amount, server) => {
-  // Validate addresses
-  if (!StrKey.isValidEd25519PublicKey(sourcePublicKey.address)) {
+export const buildTransaction = async (server, toAddress, amount) => {
+  const fromAddressWrapped = await getAddress();
+  const fromAddress = fromAddressWrapped.address;
+
+  if (!StrKey.isValidEd25519PublicKey(fromAddress)) {
     throw new Error('Invalid source public key');
   }
-
-  if (!StrKey.isValidContract(destinationPublicKey)) {
+  
+  if (!StrKey.isValidEd25519PublicKey(toAddress)) {
     throw new Error('Invalid destination public key');
   }
 
-  const sourceAccount = await server.loadAccount(sourcePublicKey.address);
+  const sourceAccount = await server.loadAccount(fromAddress);
   
   const transaction = new TransactionBuilder(sourceAccount, {
     fee: await server.fetchBaseFee(),
-    networkPassphrase: STELLAR_NETWORK === 'PUBLIC' ? Networks.PUBLIC : Networks.TESTNET,
+    networkPassphrase: NETWORK_PASSPHRASE,
   })
     .addOperation(
       Operation.invokeContractFunction({
-        contract: RECIPIENT_ADDRESS,
-        function: "donate",
+        contract: STRALIO_CONTRACT_ID,
+        function: 'donate',
         args: [
-          new Address(sourceAccount.account_id).toScVal(),
-          new Address(destinationPublicKey).toScVal(), 
-          new Address("CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC").toScVal(), 
-          nativeToScVal(amount * LUMENS, { type: "i128" })
+          new Address(fromAddress).toScVal(),
+          new Address(toAddress).toScVal(), 
+          new Address(XML_CONTRACT_ID).toScVal(), 
+          nativeToScVal(BigInt(amount * LUMENS), { type: "i128" })
         ]
       })
     )
@@ -58,31 +59,24 @@ export const buildTransaction = async (sourcePublicKey, destinationPublicKey, am
 
 /**
  * Sign and submit transaction via Freighter
+ * @param {Object} server - Stellar SDK server instance
  * @param {Object} transaction - Stellar transaction object
  * @returns {Promise<Object>} - Transaction result with hash
  */
-export const signAndSubmit = async (transaction) => {
+export const signAndSubmit = async (server, transaction) => {
   try {
     const { signTransaction } = await import('@stellar/freighter-api');
+    const { rpc, assembleTransaction } = await import('@stellar/stellar-sdk');
+    const rpcServer = new rpc.Server(RPC_SOROBAN_URL);
+
+    const sim = await rpcServer.simulateTransaction(transaction);
+    const preparedTx = rpc.assembleTransaction(transaction, sim).build();
     
-    // Let Freighter sign the transaction
-    const { signedTxXdr } = await signTransaction(transaction.toXDR(), {
-      networkPassphrase: STELLAR_NETWORK === 'PUBLIC' ? Networks.PUBLIC : Networks.TESTNET,
-    });
-
-    // Reconstruct the Transaction from the signed XDR
-    const signedTransaction = TransactionBuilder.fromXDR(signedTxXdr, STELLAR_NETWORK === 'PUBLIC' ? Networks.PUBLIC : Networks.TESTNET);
-
-    // Submit to network
-    const { Horizon } = await import('@stellar/stellar-sdk');
-    const server = new Horizon.Server(
-      STELLAR_NETWORK === 'PUBLIC'
-        ? 'https://horizon.stellar.org'
-        : 'https://horizon-testnet.stellar.org'
-    );
+    const { signedTxXdr } = await signTransaction(preparedTx.toXDR(), { networkPassphrase: NETWORK_PASSPHRASE });
+    const signedTransaction = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
 
     const result = await server.submitTransaction(signedTransaction);
-    
+
     return {
       success: true,
       hash: result.hash,
@@ -94,6 +88,17 @@ export const signAndSubmit = async (transaction) => {
     }
     throw error;
   }
+};
+
+export const donate = async (toAddress, amount) => {
+  const { Horizon } = await import('@stellar/stellar-sdk');
+
+  const server = new Horizon.Server(HORIZON_SERVER_URL);
+
+  const transaction = await buildTransaction(server, toAddress, amount);
+  const result = await signAndSubmit(server, transaction);
+
+  return result;
 };
 
 /**

@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { useStralioForm } from '../hooks/useStralioForm';
 import { useFreighter } from '../hooks/useFreighter';
-import { buildTransaction, signAndSubmit, getTransactionUrl } from '../utils/stellar';
+import { donate } from '../utils/stellar';
 import { validateForm } from '../utils/validation';
-import { RECIPIENT_ADDRESS, MIN_DONATION, MAX_DONATION, MESSAGES, STELLAR_NETWORK } from '../config/constants';
+import { MIN_DONATION, MAX_DONATION, MESSAGES } from '../config/constants';
 import { Horizon } from "@stellar/stellar-sdk";
 import FormField from './FormField';
 import StatusMessage from './StatusMessage';
@@ -36,23 +36,10 @@ const StralioForm = () => {
       freighter.clearError();
 
       try {
-        // Build server instance
-        const server = new Horizon.Server(
-          STELLAR_NETWORK === 'PUBLIC'
-            ? 'https://horizon.stellar.org'
-            : 'https://horizon-testnet.stellar.org'
+        const result = await donate(
+          "GA2V3EN2ZZN2262CHL2GNO32T4EJDHN266FYTRYR2L7HOVUYQMMYXVJL",
+          formData.amount
         );
-
-        // Build transaction
-        const transaction = await buildTransaction(
-          freighter.publicKey,
-          RECIPIENT_ADDRESS,
-          parseFloat(formData.amount),
-          server
-        );
-
-        // Sign and submit via Freighter
-        const result = await signAndSubmit(transaction);
 
         if (result.success) {
           form.setSuccess();
