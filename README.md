@@ -28,9 +28,9 @@ A React-based donation application that allows users to submit donations via the
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` and set your Stellar recipient address:
+   Edit `.env` and set your contract-id recipient address:
    ```
-   VITE_RECIPIENT_ADDRESS=GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+   VITE_STRALIO_CONTRACT_ID=CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
    ```
 
 3. **Start development server**

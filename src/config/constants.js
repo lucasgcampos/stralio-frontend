@@ -7,7 +7,7 @@ export const USERNAME_MAX_LENGTH = 30;
 export const MESSAGE_MAX_LENGTH = 200;
 
 // Recipient address (from environment variable with fallback)
-export const RECIPIENT_ADDRESS = import.meta.env.VITE_RECIPIENT_ADDRESS || 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+export const STRALIO_CONTRACT_ID = import.meta.env.VITE_STRALIO_CONTRACT_ID || 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
 // Stellar network
 // export const STELLAR_NETWORK = 'PUBLIC';
