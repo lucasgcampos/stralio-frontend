@@ -10,9 +10,11 @@ export const MESSAGE_MAX_LENGTH = 200;
 export const STRALIO_CONTRACT_ID = import.meta.env.VITE_STRALIO_CONTRACT_ID || 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
 // Stellar network
-// export const STELLAR_NETWORK = 'PUBLIC';
-export const STELLAR_NETWORK = 'TESTNET';
 export const LUMENS = 10000000; // 1 XLM = 10^7 stroops
+export const STELLAR_NETWORK = 'TESTNET';
+export const XML_CONTRACT_ID = STELLAR_NETWORK === 'PUBLIC' ? 'CXXX' : 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
+export const HORIZON_SERVER_URL = STELLAR_NETWORK === 'PUBLIC' ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org';
+export const NETWORK_PASSPHRASE = STELLAR_NETWORK === 'PUBLIC' ? Networks.PUBLIC : Networks.TESTNET;
 
 // UI messages
 export const MESSAGES = {
