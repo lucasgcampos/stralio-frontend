@@ -21,7 +21,7 @@ export const getAddress = async () => {
  * @param {Object} server - Stellar SDK server instance
  * @returns {Promise<Transaction>} - Transaction object
  */
-export const buildTransaction = async (server, toAddress, amount) => {
+export const buildTransaction = async (server, toAddress, amount, username, message) => {
   const fromAddressWrapped = await getAddress();
   const fromAddress = fromAddressWrapped.address;
 
@@ -47,7 +47,9 @@ export const buildTransaction = async (server, toAddress, amount) => {
           new Address(fromAddress).toScVal(),
           new Address(toAddress).toScVal(), 
           new Address(XML_CONTRACT_ID).toScVal(), 
-          nativeToScVal(BigInt(amount * LUMENS), { type: "i128" })
+          nativeToScVal(BigInt(amount * LUMENS), { type: "i128" }),
+          nativeToScVal(username),
+          nativeToScVal(message)        
         ]
       })
     )
@@ -90,12 +92,12 @@ export const signAndSubmit = async (server, transaction) => {
   }
 };
 
-export const donate = async (toAddress, amount) => {
+export const donate = async (toAddress, amount, username, message) => {
   const { Horizon } = await import('@stellar/stellar-sdk');
 
   const server = new Horizon.Server(HORIZON_SERVER_URL);
 
-  const transaction = await buildTransaction(server, toAddress, amount);
+  const transaction = await buildTransaction(server, toAddress, amount, username, message);
   const result = await signAndSubmit(server, transaction);
 
   return result;

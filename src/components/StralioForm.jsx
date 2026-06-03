@@ -38,7 +38,9 @@ const StralioForm = () => {
       try {
         const result = await donate(
           "GA2V3EN2ZZN2262CHL2GNO32T4EJDHN266FYTRYR2L7HOVUYQMMYXVJL",
-          formData.amount
+          formData.amount,
+          formData.username,
+          formData.message        
         );
 
         if (result.success) {
