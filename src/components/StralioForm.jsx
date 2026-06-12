@@ -1,46 +1,62 @@
 import { useCallback } from 'react';
 import { useStralioForm } from '../hooks/useStralioForm';
-import { useFreighter } from '../hooks/useFreighter';
+import { useWallet } from '../hooks/useWallet';
 import { donate } from '../utils/stellar';
 import { validateForm } from '../utils/validation';
 import { MIN_DONATION, MAX_DONATION, MESSAGES } from '../config/constants';
-import { Horizon } from "@stellar/stellar-sdk";
 import FormField from './FormField';
 import StatusMessage from './StatusMessage';
 
+const RECIPIENT = 'GA2V3EN2ZZN2262CHL2GNO32T4EJDHN266FYTRYR2L7HOVUYQMMYXVJL';
+
 /**
  * StralioForm component
- * Main donation form with Freighter wallet integration
+ * Donation form with multi-wallet support (desktop + mobile) via stellar-wallets-kit.
  */
 const StralioForm = () => {
   const form = useStralioForm();
-  const freighter = useFreighter();
-  const { formData, charCounts } = form;
+  const wallet = useWallet();
+  const { formData } = form;
+
+  const handleConnectWallet = useCallback(
+    async (e) => {
+      e.preventDefault();
+      await wallet.connect();
+    },
+    [wallet]
+  );
 
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
 
-      // Validate form
+      // 1. Validate form fields
       const fieldErrors = validateForm(formData);
       const hasErrors = Object.values(fieldErrors).some((err) => err !== null);
-
       if (hasErrors) {
         form.markAllTouched();
         form.setErrors(fieldErrors);
         return;
       }
 
-      // Start submission
-      form.setSubmitting();
-      freighter.clearError();
+      // 2. Ensure wallet is connected (opens modal if not)
+      if (!wallet.isConnected || !wallet.publicKey) {
+        const result = await wallet.connect();
+        if (!result.success) return;
+      }
+
+      // 3. Build, sign and submit
+      form.setSubmitting(true);
+      wallet.clearError();
 
       try {
         const result = await donate(
-          "GA2V3EN2ZZN2262CHL2GNO32T4EJDHN266FYTRYR2L7HOVUYQMMYXVJL",
+          wallet.publicKey,
+          RECIPIENT,
           formData.amount,
           formData.username,
-          formData.message        
+          formData.message,
+          wallet.signTransaction
         );
 
         if (result.success) {
@@ -53,47 +69,45 @@ const StralioForm = () => {
         form.setErrors({ submit: message });
       }
     },
-    [formData, form, freighter]
+    [formData, form, wallet]
   );
 
-  // Determine button state
-  const isButtonDisabled = !form.isValid || form.isSubmitting || !freighter.isInstalled;
+  const isButtonDisabled = !form.isValid || form.isSubmitting;
 
-  // Get button text
   const getButtonText = () => {
-    if (!freighter.isInstalled) return 'Install Freighter Wallet';
     if (form.isSubmitting) return 'Processing...';
+    if (!wallet.isConnected) return 'Connect Wallet & Donate';
     return 'Confirm Donation';
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Wallet connection status */}
-      {!freighter.isInstalled && (
-        <StatusMessage
-          type="error"
-          message={MESSAGES.WALLET_NOT_INSTALLED}
-          link={{
-            text: 'Get Freighter Wallet',
-            url: 'https://www.freighter.app/',
-          }}
-        />
-      )}
 
-      {!freighter.isConnected && freighter.isInstalled && (
-        <div className="flex items-center justify-between p-4 bg-blue-900/30 border border-blue-500/50 rounded-lg">
-          <span className="text-sm text-blue-400">Wallet connected: {freighter.publicKey?.slice(0, 4)}...{freighter.publicKey?.slice(-4)}</span>
+      {/* Wallet status bar */}
+      {wallet.isConnected ? (
+        <div className="flex items-center justify-between p-3 bg-blue-900/30 border border-blue-500/50 rounded-lg">
+          <span className="text-sm text-blue-400">
+            ● Connected: {wallet.publicKey?.slice(0, 6)}…{wallet.publicKey?.slice(-6)}
+          </span>
           <button
             type="button"
-            onClick={freighter.disconnect}
+            onClick={wallet.disconnect}
             className="text-xs text-slate-400 hover:text-white transition-colors"
           >
             Disconnect
           </button>
         </div>
+      ) : (
+        <button
+          type="button"
+          onClick={handleConnectWallet}
+          className="w-full py-3 px-4 rounded-lg border border-blue-500/60 text-blue-400 text-sm font-medium hover:bg-blue-900/30 transition-colors"
+        >
+          Connect Wallet (Freighter, Lobstr, mobile…)
+        </button>
       )}
 
-      {/* Username field */}
+      {/* Form fields */}
       <FormField
         label="Username"
         name="username"
@@ -109,7 +123,6 @@ const StralioForm = () => {
         disabled={form.isSubmitting}
       />
 
-      {/* Message field */}
       <FormField
         label="Message"
         name="message"
@@ -126,7 +139,6 @@ const StralioForm = () => {
         disabled={form.isSubmitting}
       />
 
-      {/* Donation amount field */}
       <FormField
         label="Donation Amount (XLM)"
         name="amount"
@@ -141,11 +153,11 @@ const StralioForm = () => {
       />
 
       {/* Status messages */}
-      {freighter.error && (
+      {wallet.error && (
         <StatusMessage
           type="error"
-          message={freighter.error}
-          onDismiss={freighter.clearError}
+          message={wallet.error}
+          onDismiss={wallet.clearError}
         />
       )}
 
@@ -157,6 +169,13 @@ const StralioForm = () => {
         />
       )}
 
+      {form.isSubmitting && (
+        <StatusMessage
+          type="loading"
+          message="Please confirm the transaction in your wallet…"
+        />
+      )}
+
       {form.isSuccess && (
         <StatusMessage
           type="success"
@@ -165,13 +184,6 @@ const StralioForm = () => {
             text: 'View on StellarExpert',
             url: `https://stellar.expert/explorer/public/tx/${form.transactionHash}`,
           }}
-        />
-      )}
-
-      {form.isSubmitting && (
-        <StatusMessage
-          type="loading"
-          message="Please confirm the transaction in your Freighter Wallet..."
         />
       )}
 
