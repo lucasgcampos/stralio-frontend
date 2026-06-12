@@ -19,10 +19,12 @@ export const HORIZON_SERVER_URL = STELLAR_NETWORK === 'PUBLIC' ? 'https://horizo
 export const RPC_SOROBAN_URL = STELLAR_NETWORK === 'PUBLIC' ? 'https://soroban.stellar.org' : 'https://soroban-testnet.stellar.org';
 export const NETWORK_PASSPHRASE = STELLAR_NETWORK === 'PUBLIC' ? Networks.PUBLIC : Networks.TESTNET;
 
+// WalletConnect project ID (from WalletConnect Cloud)
+export const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'none';
+
 // UI messages
 export const MESSAGES = {
-  WALLET_NOT_INSTALLED: 'Freighter Wallet is not installed. Please install it from the Chrome Web Store.',
-  WALLET_NOT_CONNECTED: 'Please unlock your Freighter Wallet to continue.',
+  WALLET_NOT_CONNECTED: 'No wallet connected. Click "Connect Wallet" to continue.',
   TRANSACTION_REJECTED: 'Transaction was rejected. Please try again.',
   TRANSACTION_SUCCESS: 'Donation sent successfully! View on StellarExpert:',
   TRANSACTION_ERROR: 'Transaction failed. Please try again.',
