@@ -11,7 +11,7 @@ import { MESSAGES, NETWORK_PASSPHRASE, WALLETCONNECT_PROJECT_ID, STELLAR_NETWORK
  * Extension wallets (Freighter, Lobstr, xBull) are never available here,
  * so we skip the generic modal and go straight to WalletConnect.
  */
-const isMobile = () =>
+export const isMobile = () =>
   /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
 
 /**
