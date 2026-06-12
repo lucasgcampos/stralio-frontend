@@ -100,10 +100,11 @@ export const useWallet = () => {
       let address;
 
       if (isMobile()) {
-        // Force WalletConnect as the active module and fetch address,
-        // which triggers the WalletConnect / Reown AppKit modal.
+        // Force WalletConnect as the active module then fetch the address,
+        // which delegates to WalletConnectModule.getAddress() and opens
+        // the Reown AppKit modal with only mobile-compatible wallets.
         kit.setWallet(WALLET_CONNECT_ID);
-        ({ address } = await kit.getAddress());
+        ({ address } = await kit.fetchAddress());
       } else {
         // Desktop: show the full wallet-selection modal.
         ({ address } = await kit.authModal());
