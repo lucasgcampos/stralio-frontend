@@ -48,8 +48,9 @@ const StralioForm = () => {
           form.resetForm();
         }
       } catch (error) {
-        // Error handled by useFreighter hook
         form.setSubmitting(false);
+        const message = error?.message || MESSAGES.TRANSACTION_ERROR;
+        form.setErrors({ submit: message });
       }
     },
     [formData, form, freighter]
@@ -145,6 +146,14 @@ const StralioForm = () => {
           type="error"
           message={freighter.error}
           onDismiss={freighter.clearError}
+        />
+      )}
+
+      {form.errors.submit && !form.isSubmitting && (
+        <StatusMessage
+          type="error"
+          message={form.errors.submit}
+          onDismiss={() => form.setErrors({})}
         />
       )}
 
