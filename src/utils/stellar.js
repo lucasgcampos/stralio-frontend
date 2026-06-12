@@ -68,21 +68,53 @@ export const buildTransaction = async (server, toAddress, amount, username, mess
 export const signAndSubmit = async (server, transaction) => {
   try {
     const { signTransaction } = await import('@stellar/freighter-api');
-    const { rpc, assembleTransaction } = await import('@stellar/stellar-sdk');
-    const rpcServer = new rpc.Server(RPC_SOROBAN_URL);
+    const { rpc } = await import('@stellar/stellar-sdk');
+    const rpcServer = new rpc.Server(RPC_SOROBAN_URL, { allowHttp: false });
 
+    // Simulate the transaction first
     const sim = await rpcServer.simulateTransaction(transaction);
-    const preparedTx = rpc.assembleTransaction(transaction, sim).build();
-    
-    const { signedTxXdr } = await signTransaction(preparedTx.toXDR(), { networkPassphrase: NETWORK_PASSPHRASE });
-    const signedTransaction = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
 
-    const result = await server.submitTransaction(signedTransaction);
+    // Check for simulation errors before proceeding
+    if (rpc.Api.isSimulationError(sim)) {
+      throw new Error(`Transaction simulation failed: ${sim.error}`);
+    }
+
+    const preparedTx = rpc.assembleTransaction(transaction, sim).build();
+
+    // signTransaction expects the XDR string as first argument
+    const signResult = await signTransaction(preparedTx.toXDR(), {
+      networkPassphrase: NETWORK_PASSPHRASE,
+    });
+
+    // Handle both old ({ signedTxXdr }) and new ({ signedTxXdr } or string) API shapes
+    const signedXdr = typeof signResult === 'string' ? signResult : signResult.signedTxXdr;
+    if (!signedXdr) {
+      throw new Error('Transaction rejected by user');
+    }
+
+    const signedTransaction = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
+    const result = await rpcServer.sendTransaction(signedTransaction);
+
+    if (result.status === 'ERROR') {
+      throw new Error(`Transaction submission failed: ${result.errorResult ?? result.status}`);
+    }
+
+    // Poll for final status
+    let getResult = await rpcServer.getTransaction(result.hash);
+    let attempts = 0;
+    while (getResult.status === rpc.Api.GetTransactionStatus.NOT_FOUND && attempts < 20) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      getResult = await rpcServer.getTransaction(result.hash);
+      attempts++;
+    }
+
+    if (getResult.status === rpc.Api.GetTransactionStatus.FAILED) {
+      throw new Error('Transaction failed on-chain');
+    }
 
     return {
       success: true,
       hash: result.hash,
-      ledger: result.ledger,
     };
   } catch (error) {
     if (error.message?.includes('User denied') || error.message?.includes('rejected')) {

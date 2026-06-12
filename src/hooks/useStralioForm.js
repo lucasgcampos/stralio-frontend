@@ -106,7 +106,7 @@ export const useStralioForm = () => {
     // Handlers
     handleChange,
     handleBlur,
-    setSubmitting: () => setIsSubmitting(true),
+    setSubmitting: (value = true) => setIsSubmitting(value),
     setSuccess: () => setIsSuccess(true),
     setErrors,
     resetForm,
