@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useStralioForm } from '../hooks/useStralioForm';
-import { useWallet } from '../hooks/useWallet';
+import { useWallet, isMobile } from '../hooks/useWallet';
 import { donate } from '../utils/stellar';
 import { validateForm } from '../utils/validation';
 import { MIN_DONATION, MAX_DONATION, MESSAGES } from '../config/constants';
@@ -98,13 +98,24 @@ const StralioForm = () => {
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={handleConnectWallet}
-          className="w-full py-3 px-4 rounded-lg border border-blue-500/60 text-blue-400 text-sm font-medium hover:bg-blue-900/30 transition-colors"
-        >
-          Connect Wallet (Freighter, Lobstr, mobile…)
-        </button>
+        <>
+          {/* Mobile hint: app must be open in background before connecting */}
+          {isMobile() && (
+            <div className="flex items-start gap-2 p-3 bg-amber-900/20 border border-amber-500/40 rounded-lg text-xs text-amber-400">
+              <span className="mt-0.5 shrink-0">⚠️</span>
+              <span>
+                Open your wallet app (Freighter, Lobstr…) in the background before connecting, otherwise the connection may time out.
+              </span>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleConnectWallet}
+            className="w-full py-3 px-4 rounded-lg border border-blue-500/60 text-blue-400 text-sm font-medium hover:bg-blue-900/30 transition-colors"
+          >
+            Connect Wallet {isMobile() ? '(Freighter, Lobstr…)' : '(Freighter, Lobstr, mobile…)'}
+          </button>
+        </>
       )}
 
       {/* Form fields */}

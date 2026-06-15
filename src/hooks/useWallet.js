@@ -1,14 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { StellarWalletsKit, KitEventType } from '@creit.tech/stellar-wallets-kit';
 import { FreighterModule } from '@creit.tech/stellar-wallets-kit/modules/freighter';
-import { WalletConnectModule, WalletConnectTargetChain } from '@creit.tech/stellar-wallets-kit/modules/wallet-connect';
+import { WalletConnectModule, WalletConnectTargetChain, WALLET_CONNECT_ID } from '@creit.tech/stellar-wallets-kit/modules/wallet-connect';
 import { LobstrModule } from '@creit.tech/stellar-wallets-kit/modules/lobstr';
 import { xBullModule } from '@creit.tech/stellar-wallets-kit/modules/xbull';
 import { MESSAGES, NETWORK_PASSPHRASE, WALLETCONNECT_PROJECT_ID, STELLAR_NETWORK } from '../config/constants';
 
 /**
+ * Returns true when the page is being viewed on a mobile/tablet device.
+ * Extension wallets (Freighter, Lobstr, xBull) are never available here,
+ * so we skip the generic modal and go straight to WalletConnect.
+ */
+export const isMobile = () =>
+  /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+
+/**
  * Initialise the kit once (module-level singleton).
- * We lazy-init on first use so SSR / non-browser envs don't crash.
+ * Lazy-init so SSR / non-browser envs don't crash.
  */
 let _kit = null;
 
@@ -20,9 +28,12 @@ const getKit = () => {
       ? WalletConnectTargetChain.PUBLIC
       : WalletConnectTargetChain.TESTNET;
 
+  // On mobile we default to WalletConnect; on desktop to Freighter extension.
+  const defaultModuleId = isMobile() ? WALLET_CONNECT_ID : FreighterModule.productId;
+
   StellarWalletsKit.init({
     network: NETWORK_PASSPHRASE,
-    selectedModuleId: FreighterModule.productId,
+    selectedModuleId: defaultModuleId,
     modules: [
       new FreighterModule(),
       new LobstrModule(),
@@ -75,15 +86,30 @@ export const useWallet = () => {
   }, []);
 
   /**
-   * Open the wallet-selection modal.
-   * On desktop the user picks their extension wallet.
-   * On mobile a QR / deep-link is shown for WalletConnect wallets.
+   * Connect to a wallet.
+   *
+   * - Desktop: opens the kit's authModal so the user can pick any extension wallet.
+   * - Mobile: skips the generic modal, activates WalletConnect directly and opens
+   *   the Reown AppKit modal which only lists mobile-compatible wallets (Freighter
+   *   app, Lobstr app, etc.) via QR code / deep link.
    */
   const connect = useCallback(async () => {
     setError(null);
     try {
       const kit = getKit();
-      const { address } = await kit.authModal();
+      let address;
+
+      if (isMobile()) {
+        // Force WalletConnect as the active module then fetch the address,
+        // which delegates to WalletConnectModule.getAddress() and opens
+        // the Reown AppKit modal with only mobile-compatible wallets.
+        kit.setWallet(WALLET_CONNECT_ID);
+        ({ address } = await kit.fetchAddress());
+      } else {
+        // Desktop: show the full wallet-selection modal.
+        ({ address } = await kit.authModal());
+      }
+
       setPublicKey(address);
       setIsConnected(true);
       return { success: true, publicKey: address };

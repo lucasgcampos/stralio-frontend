@@ -1,19 +1,30 @@
-# Stralio
+# Stralio Frontend
 
-A React-based donation application that allows users to submit donations via the Stellar network using Freighter Wallet.
+React donation app built on the Stellar network. Supports desktop and mobile wallets via [`@creit.tech/stellar-wallets-kit`](https://github.com/Creit-Tech/Stellar-Wallets-Kit).
 
 ## Features
 
-- Clean, modern UI with responsive design
+- Multi-wallet support: Freighter, Lobstr, xBull, and any WalletConnect-compatible wallet
+- Works on desktop (browser extension) and mobile (QR code / deep link via WalletConnect)
+- Soroban smart contract integration for on-chain donations
 - Form validation with character counters
-- Freighter Wallet integration
-- Real-time transaction status
+- Real-time transaction status with StellarExpert link
 - Docker support for containerized deployment
+
+## Supported Wallets
+
+| Wallet | Desktop | Mobile |
+|--------|---------|--------|
+| Freighter | ✅ Extension | ✅ WalletConnect |
+| Lobstr | ✅ Extension | ✅ WalletConnect |
+| xBull | ✅ Extension | ✅ WalletConnect |
+| Any WalletConnect wallet | — | ✅ |
 
 ## Prerequisites
 
-- Node.js 18+ and npm
-- Freighter Wallet browser extension (for testing transactions)
+- Node.js 18+
+- A supported Stellar wallet (see table above)
+- A [WalletConnect Cloud](https://cloud.walletconnect.com) project ID (free)
 
 ## Getting Started
 
@@ -28,18 +39,19 @@ A React-based donation application that allows users to submit donations via the
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` and set your contract-id recipient address:
-   ```
+
+   Edit `.env`:
+   ```env
    VITE_STRALIO_CONTRACT_ID=CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+   VITE_WALLETCONNECT_PROJECT_ID=your_project_id_here
    ```
 
-3. **Start development server**
+3. **Start the dev server**
    ```bash
    npm run dev
    ```
 
-4. **Open in browser**
-   Navigate to `http://localhost:5173`
+4. Open `http://localhost:5173`
 
 ### Build for Production
 
@@ -47,7 +59,7 @@ A React-based donation application that allows users to submit donations via the
 npm run build
 ```
 
-The built files will be in the `dist/` directory.
+Output goes to `dist/`.
 
 ### Preview Production Build
 
@@ -55,28 +67,29 @@ The built files will be in the `dist/` directory.
 npm run preview
 ```
 
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_STRALIO_CONTRACT_ID` | Yes | Soroban contract address (C…) |
+| `VITE_WALLETCONNECT_PROJECT_ID` | Yes | Project ID from [cloud.walletconnect.com](https://cloud.walletconnect.com) |
+
+When deploying to Vercel, add these in **Project Settings → Environment Variables**.
+
 ## Docker
 
-### Build the Docker Image
+### Build and Run
 
 ```bash
 docker build -t stralio-frontend .
-```
-
-### Run the Container
-
-```bash
 docker run -d -p 3000:80 --env-file .env stralio-frontend
 ```
 
-The application will be available at `http://localhost:3000`.
+The app will be available at `http://localhost:3000`.
 
-### Docker Compose (Optional)
-
-Create a `docker-compose.yml`:
+### Docker Compose
 
 ```yaml
-version: '3.8'
 services:
   stralio:
     build: .
@@ -86,7 +99,6 @@ services:
       - .env
 ```
 
-Run with:
 ```bash
 docker-compose up -d
 ```
@@ -102,62 +114,56 @@ stralio-frontend/
 │   │   ├── StatusMessage.jsx      # Success/error/loading messages
 │   │   └── StralioForm.jsx        # Main donation form
 │   ├── hooks/
-│   │   ├── useFreighter.js        # Freighter wallet integration
+│   │   ├── useWallet.js           # Multi-wallet integration (stellar-wallets-kit)
 │   │   └── useStralioForm.js      # Form state management
 │   ├── utils/
-│   │   ├── stellar.js             # Stellar transaction helpers
-│   │   └── validation.js          # Form validation utilities
+│   │   ├── stellar.js             # Transaction build / sign / submit helpers
+│   │   └── validation.js          # Form validation
 │   ├── config/
-│   │   └── constants.js           # App configuration
-│   ├── styles/
-│   │   └── index.css              # Tailwind + custom styles
-│   ├── App.jsx                    # Main app component
-│   └── main.jsx                   # Entry point
-├── Dockerfile                     # Multi-stage Docker build
-├── nginx.conf                     # Nginx configuration
-├── .env                           # Environment variables
-├── .env.example                   # Environment template
-└── README.md                      # This file
+│   │   └── constants.js           # Network config and env vars
+│   ├── App.jsx
+│   └── main.jsx
+├── Dockerfile
+├── nginx.conf
+├── .env
+├── .env.example
+└── README.md
 ```
 
 ## Form Fields
 
-| Field | Type | Required | Validation |
-|-------|------|----------|------------|
-| Username | Text | Yes | Max 30 characters |
-| Message | Textarea | Yes | Max 500 characters |
-| Amount | Number | Yes | 10 - 10,000 XLM |
+| Field | Required | Validation |
+|-------|----------|------------|
+| Username | Yes | Max 30 characters |
+| Message | Yes | Max 200 characters |
+| Amount (XLM) | Yes | 2 – 10,000 XLM |
 
-## Technical Details
+## Technical Stack
 
-- **Framework**: React 18 with Vite
+- **Framework**: React 19 + Vite
 - **Styling**: Tailwind CSS v4
 - **Stellar SDK**: `@stellar/stellar-sdk`
-- **Wallet**: `@stellar/freighter-api`
-- **Network**: Stellar Public Network
-
-## Security Notes
-
-- Never commit `.env` files with real addresses to version control
-- The recipient address is hardcoded in the client-side code
-- For production, consider using environment-specific builds
-- Always verify transaction details in Freighter before confirming
+- **Wallet layer**: `@creit.tech/stellar-wallets-kit` (Freighter, Lobstr, xBull, WalletConnect)
+- **Network**: Stellar Testnet (change `STELLAR_NETWORK` in `constants.js` for Mainnet)
 
 ## Troubleshooting
 
-### Freighter Wallet Not Detected
-- Ensure the Freighter extension is installed and unlocked
-- Refresh the page after unlocking Freighter
-- Check browser console for errors
+**Wallet modal doesn't open**
+- Make sure `VITE_WALLETCONNECT_PROJECT_ID` is set correctly
+- On mobile, ensure you have a WalletConnect-compatible wallet installed (Freighter or Lobstr app)
 
-### Transaction Fails
-- Verify you have sufficient XLM balance
-- Check that the recipient address is valid
-- Ensure Freighter is connected to the public network
+**Transaction simulation fails**
+- Verify the contract ID in `VITE_STRALIO_CONTRACT_ID` is deployed on the correct network
+- Check the browser console for the exact simulation error
 
-### Build Errors
-- Clear `node_modules` and reinstall: `rm -rf node_modules && npm install`
-- Ensure Node.js version is 18 or higher
+**Transaction never confirms**
+- The app polls for up to 20 seconds. If the network is slow, the transaction may still succeed — check [StellarExpert](https://stellar.expert) with the hash from the console
+
+**Build errors**
+```bash
+rm -rf node_modules && npm install
+```
+Ensure Node.js 18+.
 
 ## License
 
